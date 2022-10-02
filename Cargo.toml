@@ -2,7 +2,7 @@
 name = "luacells"
 version = "0.1.0"
 edition = "2021"
-description = "Run cellular automata with Lua scripts"
+description = "A Rust text-based cellular automata simulator that uses Lua for rule definitions."
 license = "MIT"
 repository = "https://github.com/nph278/luacells"
 homepage = "https://github.com/nph278/luacells"

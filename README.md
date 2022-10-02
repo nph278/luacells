@@ -1,6 +1,6 @@
 # luacells
 
-A Rust text-based cellular automata simulator that uses lua for rule definitions.
+A Rust text-based cellular automata simulator that uses Lua for rule definitions.
 
 ## Installation
 
