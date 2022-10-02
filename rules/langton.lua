@@ -1,4 +1,4 @@
-Rule = function(c, n)
+Update = function(c, n)
   if c == 0 then
     if n[1] == 4 or n[1] == 9 then
       return 3

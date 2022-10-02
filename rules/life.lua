@@ -1,7 +1,8 @@
+-- These vars can be modified to create other totalistic CA.
 local survive = { [2] = true, [3] = true };
 local born = { [3] = true };
 
-Rule = function(c, n)
+Update = function(c, n)
   local sum = 0
   for _, v in ipairs(n) do
     sum = sum + v
@@ -27,3 +28,4 @@ Display = function(n)
 end
 
 States = 2
+Randomize = true

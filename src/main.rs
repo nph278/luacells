@@ -251,10 +251,10 @@ fn main() {
         .exec()
         .unwrap_or_else(|e| eprintln!("{}", e));
 
-    let rule: LuaFunction = lua
+    let update: LuaFunction = lua
         .globals()
-        .get("Rule")
-        .unwrap_or_else(|_| die!("No Rule global"));
+        .get("Update")
+        .unwrap_or_else(|_| die!("No Update global"));
 
     let display: LuaFunction = lua
         .globals()
@@ -265,6 +265,8 @@ fn main() {
         .globals()
         .get("States")
         .unwrap_or_else(|_| die!("No States global"));
+
+    let randomize_start: bool = lua.globals().get("Randomize").unwrap_or(false);
 
     let mut grid = if let Some(pattern) = pattern {
         let mut pattern: Vec<Vec<u16>> = pattern
@@ -287,6 +289,9 @@ fn main() {
 
     let (send, recv) = mpsc::channel::<Message>();
     send.send(Message::ScreenClear).unwrap(); // Clear at start
+    if randomize_start {
+        send.send(Message::Randomize).unwrap();
+    }
     send.send(Message::Render).unwrap(); // Draw at start
 
     // Input loop
@@ -377,10 +382,17 @@ fn main() {
                 }
             }
             Message::Step => {
+                if playing {
+                    let send = send.clone();
+                    std::thread::spawn(move || {
+                        std::thread::sleep(std::time::Duration::from_millis(delay));
+                        send.send(Message::Step).unwrap();
+                    });
+                }
                 let mut diff = vec![];
                 for i in 0..rows {
                     for j in 0..cols {
-                        let new = rule
+                        let new = update
                             .call((
                                 grid[i][j],
                                 neighborhood(
@@ -394,7 +406,7 @@ fn main() {
                                 .map(|(x, y)| grid[y][x])
                                 .collect::<Vec<u16>>(),
                             ))
-                            .unwrap_or_else(|e| die!("Error in Rule function:\n{}", e));
+                            .unwrap_or_else(|e| die!("Error in Update function:\n{}", e));
                         if new != grid[i][j] {
                             diff.push((i, j, new));
                         }
@@ -421,13 +433,7 @@ fn main() {
                         }
                     }
                 }
-                if playing {
-                    let send = send.clone();
-                    std::thread::spawn(move || {
-                        std::thread::sleep(std::time::Duration::from_millis(delay));
-                        send.send(Message::Step).unwrap();
-                    });
-                }
+                println!();
             }
             Message::PlayPause => {
                 playing = !playing;

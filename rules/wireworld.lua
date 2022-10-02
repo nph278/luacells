@@ -1,4 +1,4 @@
-Rule = function(c, n)
+Update = function(c, n)
   if c == 0 then
     return 0
   elseif c == 1 then
