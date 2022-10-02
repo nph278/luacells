@@ -63,18 +63,7 @@ enum Message {
     GridClear,
     PlayPause,
     Randomize,
-    // Save,
-}
-
-fn exit() {
-    execute!(std::io::stdout(), Show).unwrap();
-    execute!(std::io::stdout(), Show).unwrap();
-    execute!(std::io::stdout(), DisableMouseCapture).unwrap();
-    execute!(std::io::stdout(), Clear(ClearType::All)).unwrap();
-    execute!(std::io::stdout(), MoveTo(0, 0)).unwrap();
-    disable_raw_mode().unwrap();
-    println!();
-    std::process::exit(0);
+    Exit,
 }
 
 fn serialize_pattern(v: Vec<Vec<u16>>) -> String {
@@ -110,7 +99,7 @@ fn handle_input(send: &mpsc::Sender<Message>) {
             code: KeyCode::Char('q'),
             ..
         }) => {
-            exit();
+            send.send(Message::Exit).unwrap();
         }
         Event::Key(KeyEvent { code, .. }) => match code {
             KeyCode::Char('h') | KeyCode::Left => {
@@ -192,6 +181,7 @@ fn main() {
         std::fs::read_to_string(path).unwrap_or_else(|e| die!("Could not read rule file: {}", e));
 
     let mut pattern = None;
+    let mut save_path = None;
     let mut delay: u64 = 100;
 
     let (term_cols, term_rows) = crossterm::terminal::size().unwrap();
@@ -227,6 +217,12 @@ fn main() {
                 .unwrap_or_else(|| die!("--size requires two arguments [rows, cols]"))
                 .parse()
                 .unwrap_or_else(|_| die!("invalid size"));
+        }
+        if s == "--save" || s == "-sp" {
+            save_path = Some(
+                args.next()
+                    .unwrap_or_else(|| die!("--save requires argument")),
+            );
         }
     }
 
@@ -332,6 +328,7 @@ fn main() {
         let term_rows = term_rows - 3;
 
         match message {
+            Message::Exit => break,
             Message::ScreenClear => execute!(std::io::stdout(), Clear(ClearType::All)).unwrap(),
             Message::ShiftRow(n) => {
                 row_offset += n;
@@ -471,4 +468,19 @@ fn main() {
             }
         }
     }
+
+    execute!(std::io::stdout(), Show).unwrap();
+    execute!(std::io::stdout(), Show).unwrap();
+    execute!(std::io::stdout(), DisableMouseCapture).unwrap();
+    execute!(std::io::stdout(), Clear(ClearType::All)).unwrap();
+    execute!(std::io::stdout(), MoveTo(0, 0)).unwrap();
+    disable_raw_mode().unwrap();
+    if let Some(p) = save_path {
+        let serialized = serialize_pattern(grid);
+        if std::fs::write(p, &serialized).is_err() {
+            eprintln!("Could not write to file, printing to stdout:");
+            println!("{}", serialized);
+        };
+    }
+    std::process::exit(0);
 }
