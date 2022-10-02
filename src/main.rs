@@ -20,7 +20,7 @@ use rand::prelude::*;
 use std::sync::mpsc;
 
 const CONTROLS: &str =
-    "[q] Exit [hjkl/arrows] Move [+/-] Change speed [r] Randomize [c] Clear [s] Save pattern";
+    "[q] Exit [hjkl/wasd/arrows] Move [+/-] Change speed [r] Randomize [c] Clear [s] Save pattern";
 const CONTROLS2: &str =
     "[space] Play/Pause [tab] Step [leftclick] Draw [rightclick] Erase [scroll] Change state";
 
@@ -102,19 +102,19 @@ fn handle_input(send: &mpsc::Sender<Message>) {
             send.send(Message::Exit).unwrap();
         }
         Event::Key(KeyEvent { code, .. }) => match code {
-            KeyCode::Char('h') | KeyCode::Left => {
+            KeyCode::Char('a') | KeyCode::Char('h') | KeyCode::Left => {
                 send.send(Message::ShiftCol(-3)).unwrap();
                 send.send(Message::Render).unwrap();
             }
-            KeyCode::Char('l') | KeyCode::Right => {
+            KeyCode::Char('d') | KeyCode::Char('l') | KeyCode::Right => {
                 send.send(Message::ShiftCol(3)).unwrap();
                 send.send(Message::Render).unwrap();
             }
-            KeyCode::Char('k') | KeyCode::Up => {
+            KeyCode::Char('w') | KeyCode::Char('k') | KeyCode::Up => {
                 send.send(Message::ShiftRow(-3)).unwrap();
                 send.send(Message::Render).unwrap();
             }
-            KeyCode::Char('j') | KeyCode::Down => {
+            KeyCode::Char('s') | KeyCode::Char('j') | KeyCode::Down => {
                 send.send(Message::ShiftRow(3)).unwrap();
                 send.send(Message::Render).unwrap();
             }
@@ -309,7 +309,7 @@ fn main() {
                     let j = ((j + w * cols) as i16 + col_offset) as u16 * 2;
                     if i < term_rows && j < term_cols {
                         execute!(std::io::stdout(), MoveTo(j, i)).unwrap();
-                        print!(
+                        println!(
                             "{}",
                             normalize_cell(
                                 &display
