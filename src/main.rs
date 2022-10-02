@@ -428,15 +428,17 @@ fn main() {
                 }
             }
             Message::CycleState(n) => {
-                draw_state = (draw_state as i16 - n).clamp(0, states as i16 - 1) as u16;
+                if states > 2 {
+                    draw_state = (draw_state as i16 - n).clamp(0, states as i16 - 1) as u16;
 
-                execute!(std::io::stdout(), MoveTo(0, term_rows)).unwrap();
-                if term_cols > CONTROLS.len() as u16 + 1 {
-                    println!(" {}", CONTROLS);
-                }
-                execute!(std::io::stdout(), MoveTo(0, term_rows + 1)).unwrap();
-                if term_cols > CONTROLS2.len() as u16 + 7 {
-                    println!(" {} - {}", CONTROLS2, draw_state);
+                    execute!(std::io::stdout(), MoveTo(0, term_rows)).unwrap();
+                    if term_cols > CONTROLS.len() as u16 + 1 {
+                        println!(" {}", CONTROLS);
+                    }
+                    execute!(std::io::stdout(), MoveTo(0, term_rows + 1)).unwrap();
+                    if term_cols > CONTROLS2.len() as u16 + 7 {
+                        println!(" {} - {}", CONTROLS2, draw_state);
+                    }
                 }
             }
             Message::Draw(j, i) => {
