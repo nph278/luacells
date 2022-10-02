@@ -8,8 +8,8 @@
 
 use crossterm::cursor::{Hide, MoveTo, Show};
 use crossterm::event::{
-    read, DisableMouseCapture, EnableMouseCapture, Event, KeyCode, KeyEvent, MouseButton,
-    MouseEvent, MouseEventKind,
+    read, DisableMouseCapture, EnableMouseCapture, Event, KeyCode, KeyEvent, KeyModifiers,
+    MouseButton, MouseEvent, MouseEventKind,
 };
 use crossterm::execute;
 use crossterm::terminal::{disable_raw_mode, enable_raw_mode, Clear, ClearType};
@@ -32,6 +32,7 @@ USAGE: luacells [rule.lua]
   --help -h           Display this message
 ";
 
+// Clean up and return an error
 macro_rules! die {
     ($($s:expr), +) => {{
         execute!(std::io::stdout(), Show).unwrap();
@@ -44,6 +45,7 @@ macro_rules! die {
     }};
 }
 
+// Make a Display() output exactly 2 chars long
 fn normalize_cell(s: &str) -> String {
     if s.len() > 2 {
         return s[0..3].to_string();
@@ -55,6 +57,7 @@ fn normalize_cell(s: &str) -> String {
     s
 }
 
+// Input message
 #[derive(Debug, Clone, Copy)]
 enum Message {
     ShiftRow(i16),
@@ -101,15 +104,29 @@ fn deserialize_pattern(s: &str) -> Vec<Vec<u16>> {
         .collect()
 }
 
+// SIGTERM handler
+fn term() {
+    execute!(std::io::stdout(), Show).unwrap();
+    execute!(std::io::stdout(), Show).unwrap();
+    execute!(std::io::stdout(), DisableMouseCapture).unwrap();
+    disable_raw_mode().unwrap();
+    println!();
+    std::process::exit(130);
+}
+
+// Sends Message to main thread for inputs.
+// Handles sending Render after things that cannot be incrementally rendered
 fn handle_input(send: &mpsc::Sender<Message>) {
     match read().unwrap() {
         Event::Key(KeyEvent {
-            code: KeyCode::Char('q'),
+            code: KeyCode::Char('c'),
+            modifiers: KeyModifiers::CONTROL,
             ..
         }) => {
-            send.send(Message::Exit).unwrap();
+            term();
         }
         Event::Key(KeyEvent { code, .. }) => match code {
+            KeyCode::Char('q') => send.send(Message::Exit).unwrap(),
             KeyCode::Char('a') | KeyCode::Char('h') | KeyCode::Left => {
                 send.send(Message::ShiftCol(-3)).unwrap();
                 send.send(Message::Render).unwrap();
@@ -169,19 +186,11 @@ fn handle_input(send: &mpsc::Sender<Message>) {
 }
 
 fn main() {
-    // Not working
-    ctrlc::set_handler(|| {
-        execute!(std::io::stdout(), Show).unwrap();
-        execute!(std::io::stdout(), Show).unwrap();
-        execute!(std::io::stdout(), DisableMouseCapture).unwrap();
-        disable_raw_mode().unwrap();
-        println!();
-        std::process::exit(130);
-    })
-    .ok();
+    ctrlc::set_handler(term).ok();
 
     let mut args = std::env::args().skip(1);
 
+    // Path to rule
     let path = args
         .next()
         .unwrap_or_else(|| die!("Please provide path to rule file"));
@@ -189,18 +198,22 @@ fn main() {
         println!("{}", USAGE);
         std::process::exit(0);
     }
-    let program =
+    let rule =
         std::fs::read_to_string(path).unwrap_or_else(|e| die!("Could not read rule file: {}", e));
 
+    // Pattern path
     let mut pattern = None;
     let mut save_path = None;
     let mut delay: u64 = 100;
 
     let (term_cols, term_rows) = crossterm::terminal::size().unwrap();
+    // Trim bottom of terminal
     let term_rows = term_rows - 3;
+    // Because cells are 2 chars wide
     let mut cols = term_cols as usize / 2;
     let mut rows = term_rows as usize;
 
+    // Handle cli options
     while let Some(s) = args.next() {
         if s == "--pattern" || s == "-p" {
             let path = args
@@ -242,12 +255,15 @@ fn main() {
         }
     }
 
+    // Read pattern
     let pattern: Option<Vec<Vec<u16>>> = pattern.map(|x| deserialize_pattern(&x));
     let mut rng = thread_rng();
 
+    // Start lua
     let lua = Lua::new();
 
-    lua.load(&program)
+    // Load rule
+    lua.load(&rule)
         .exec()
         .unwrap_or_else(|e| eprintln!("{}", e));
 
@@ -269,6 +285,7 @@ fn main() {
     let randomize_start: bool = lua.globals().get("Randomize").unwrap_or(false);
 
     let mut grid = if let Some(pattern) = pattern {
+        // Read pattern
         let mut pattern: Vec<Vec<u16>> = pattern
             .into_iter()
             .map(|x| {
@@ -284,10 +301,13 @@ fn main() {
         }
         pattern
     } else {
+        // Empty pattern
         vec![vec![0; cols]; rows]
     };
 
     let (send, recv) = mpsc::channel::<Message>();
+
+    // Startup messages
     send.send(Message::ScreenClear).unwrap(); // Clear at start
     if randomize_start {
         send.send(Message::Randomize).unwrap();
@@ -305,12 +325,14 @@ fn main() {
     let mut row_offset = 0;
     let mut col_offset = 0;
     let mut playing = false;
+    // What state is being drawm
     let mut draw_state: u16 = 1;
 
     execute!(std::io::stdout(), Hide).unwrap();
     execute!(std::io::stdout(), EnableMouseCapture).unwrap();
     enable_raw_mode().unwrap();
 
+    // For use in drawing
     // Takes in pixel coords, not grid coords.
     let render_pixel = {
         let display = &display;
@@ -339,6 +361,7 @@ fn main() {
         }
     };
 
+    // Main loop
     for message in recv.iter() {
         let (term_cols, term_rows) = crossterm::terminal::size().unwrap();
         let term_rows = term_rows - 3;
@@ -382,6 +405,7 @@ fn main() {
                 }
             }
             Message::Step => {
+                // If we are playing, wait the delay and take another step
                 if playing {
                     let send = send.clone();
                     std::thread::spawn(move || {
@@ -389,6 +413,8 @@ fn main() {
                         send.send(Message::Step).unwrap();
                     });
                 }
+
+                // This stores pairs of grid coords + their new values
                 let mut diff = vec![];
                 for i in 0..rows {
                     for j in 0..cols {
