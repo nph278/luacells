@@ -23,6 +23,14 @@ const CONTROLS: &str =
     "[q] Exit [hjkl/wasd/arrows] Move [+/-] Change speed [r] Randomize [c] Clear [s] Save pattern";
 const CONTROLS2: &str =
     "[space] Play/Pause [tab] Step [leftclick] Draw [rightclick] Erase [scroll] Change state";
+const USAGE: &str = "
+USAGE: luacells [rule.lua]
+  --pattern -p        Load pattern file
+  --delay -d          Delay in millis
+  --size -s           Size of grid
+  --save -sp          Pattern file to save to after exit
+  --help -h           Display this message
+";
 
 macro_rules! die {
     ($($s:expr), +) => {{
@@ -177,6 +185,10 @@ fn main() {
     let path = args
         .next()
         .unwrap_or_else(|| die!("Please provide path to rule file"));
+    if path == "--help" || path == "-h" {
+        println!("{}", USAGE);
+        std::process::exit(0);
+    }
     let program =
         std::fs::read_to_string(path).unwrap_or_else(|e| die!("Could not read rule file: {}", e));
 
@@ -224,6 +236,10 @@ fn main() {
                     .unwrap_or_else(|| die!("--save requires argument")),
             );
         }
+        if s == "--help" || s == "-h" {
+            println!("{}", USAGE);
+            std::process::exit(0);
+        }
     }
 
     let pattern: Option<Vec<Vec<u16>>> = pattern.map(|x| deserialize_pattern(&x));
@@ -266,12 +282,7 @@ fn main() {
         }
         pattern
     } else {
-        let mut grid = vec![vec![0; cols]; rows];
-
-        for cell in grid.iter_mut().flatten() {
-            *cell = rng.gen_range(0..states);
-        }
-        grid
+        vec![vec![0; cols]; rows]
     };
 
     let (send, recv) = mpsc::channel::<Message>();
