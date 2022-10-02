@@ -66,11 +66,11 @@ enum Message {
     Exit,
 }
 
-fn serialize_pattern(v: Vec<Vec<u16>>) -> String {
+fn serialize_pattern(v: &[Vec<u16>]) -> String {
     v.iter()
         .map(|x| {
             x.iter()
-                .map(|y| y.to_string())
+                .map(std::string::ToString::to_string)
                 .collect::<Vec<String>>()
                 .join(",")
         })
@@ -78,7 +78,7 @@ fn serialize_pattern(v: Vec<Vec<u16>>) -> String {
         .join(";")
 }
 
-fn deserialize_pattern(s: String) -> Vec<Vec<u16>> {
+fn deserialize_pattern(s: &str) -> Vec<Vec<u16>> {
     s.split(';')
         .map(|x| {
             x.split(',')
@@ -226,7 +226,7 @@ fn main() {
         }
     }
 
-    let pattern: Option<Vec<Vec<u16>>> = pattern.map(deserialize_pattern);
+    let pattern: Option<Vec<Vec<u16>>> = pattern.map(|x| deserialize_pattern(&x));
     let mut rng = thread_rng();
 
     let lua = Lua::new();
@@ -476,7 +476,7 @@ fn main() {
     execute!(std::io::stdout(), MoveTo(0, 0)).unwrap();
     disable_raw_mode().unwrap();
     if let Some(p) = save_path {
-        let serialized = serialize_pattern(grid);
+        let serialized = serialize_pattern(&grid);
         if std::fs::write(p, &serialized).is_err() {
             eprintln!("Could not write to file, printing to stdout:");
             println!("{}", serialized);
