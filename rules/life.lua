@@ -1,3 +1,5 @@
+-- Conway's Game of Life
+
 -- These vars can be modified to create other totalistic CA.
 local survive = { [2] = true, [3] = true };
 local born = { [3] = true };

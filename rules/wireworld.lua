@@ -1,3 +1,5 @@
+-- Wireworld
+
 Update = function(c, n)
   if c == 0 then
     return 0
