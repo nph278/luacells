@@ -1,5 +1,3 @@
-// TODO: visual glitches when diffing with repeats
-
 #![deny(clippy::all, clippy::pedantic)]
 #![allow(
     clippy::cast_possible_truncation,
@@ -21,7 +19,8 @@ use mlua::prelude::*;
 use rand::prelude::*;
 use std::sync::mpsc;
 
-const CONTROLS: &str = "[q] Exit [hjkl/arrows] Move [+/-] Change speed [r] Randomize [c] Clear";
+const CONTROLS: &str =
+    "[q] Exit [hjkl/arrows] Move [+/-] Change speed [r] Randomize [c] Clear [s] Save pattern";
 const CONTROLS2: &str =
     "[space] Play/Pause [tab] Step [leftclick] Draw [rightclick] Erase [scroll] Change state";
 
@@ -64,6 +63,7 @@ enum Message {
     GridClear,
     PlayPause,
     Randomize,
+    // Save,
 }
 
 fn exit() {
@@ -75,6 +75,33 @@ fn exit() {
     disable_raw_mode().unwrap();
     println!();
     std::process::exit(0);
+}
+
+fn serialize_pattern(v: Vec<Vec<u16>>) -> String {
+    v.iter()
+        .map(|x| {
+            x.iter()
+                .map(|y| y.to_string())
+                .collect::<Vec<String>>()
+                .join(",")
+        })
+        .collect::<Vec<String>>()
+        .join(";")
+}
+
+fn deserialize_pattern(s: String) -> Vec<Vec<u16>> {
+    s.split(';')
+        .map(|x| {
+            x.split(',')
+                .map(|x| {
+                    println!("- {}", x);
+                    x.trim()
+                        .parse()
+                        .unwrap_or_else(|_| die!("Malformed pattern"))
+                })
+                .collect()
+        })
+        .collect()
 }
 
 fn handle_input(send: &mpsc::Sender<Message>) {
@@ -203,20 +230,7 @@ fn main() {
         }
     }
 
-    let pattern: Option<Vec<Vec<u16>>> = pattern.map(|p| {
-        p.split(';')
-            .map(|x| {
-                x.split(',')
-                    .map(|x| {
-                        println!("- {}", x);
-                        x.trim()
-                            .parse()
-                            .unwrap_or_else(|_| die!("Malformed pattern"))
-                    })
-                    .collect()
-            })
-            .collect()
-    });
+    let pattern: Option<Vec<Vec<u16>>> = pattern.map(deserialize_pattern);
     let mut rng = thread_rng();
 
     let lua = Lua::new();
@@ -289,15 +303,14 @@ fn main() {
     let render_pixel = {
         let display = &display;
         move |i, j, n| {
-            let row_repeats = term_rows as usize / rows + 1;
-            let col_repeats = term_cols as usize / (cols * 2) + 1;
+            let i = (i as i16 + row_offset).rem_euclid(rows as i16) as usize;
+            let j = (j as i16 + col_offset).rem_euclid(cols as i16) as usize;
+            let row_repeats = term_rows as usize / rows + 2;
+            let col_repeats = term_cols as usize / (cols * 2) + 2;
             for q in 0..row_repeats {
                 for w in 0..col_repeats {
-                    let i =
-                        (((i + q * rows) as i16 - row_offset).rem_euclid(term_rows as i16)) as u16;
-                    let j = (((j + w * cols) as i16 - col_offset).rem_euclid(term_cols as i16))
-                        as u16
-                        * 2;
+                    let i = ((i + q * rows) as i16 - row_offset) as u16;
+                    let j = ((j + w * cols) as i16 - col_offset) as u16 * 2;
                     if i < term_rows && j < term_cols {
                         execute!(std::io::stdout(), MoveTo(j, i)).unwrap();
                         print!(
@@ -379,20 +392,15 @@ fn main() {
                         }
                     }
                 }
-                let row_repeats = term_rows as usize / rows + 1;
-                let col_repeats = term_cols as usize / (cols * 2) + 1;
+                let row_repeats = term_rows as usize / rows + 2;
+                let col_repeats = term_cols as usize / (cols * 2) + 2;
                 for (i, j, n) in diff {
                     grid[i][j] = n;
                     // Incremental draw
                     for q in 0..row_repeats {
                         for w in 0..col_repeats {
-                            let i = (((i + q * rows) as i16 - row_offset)
-                                .rem_euclid(term_rows as i16))
-                                as u16;
-                            let j = (((j + w * cols) as i16 - col_offset)
-                                .rem_euclid(term_cols as i16))
-                                as u16
-                                * 2;
+                            let i = ((i + q * rows) as i16 - row_offset) as u16;
+                            let j = ((j + w * cols) as i16 - col_offset) as u16 * 2;
                             if i < term_rows && j < term_cols {
                                 execute!(std::io::stdout(), MoveTo(j, i)).unwrap();
                                 print!(
