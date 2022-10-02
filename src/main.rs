@@ -302,15 +302,15 @@ fn main() {
     // Takes in pixel coords, not grid coords.
     let render_pixel = {
         let display = &display;
-        move |i, j, n| {
-            let i = (i as i16 + row_offset).rem_euclid(rows as i16) as usize;
-            let j = (j as i16 + col_offset).rem_euclid(cols as i16) as usize;
+        move |i, j, n, term_rows, term_cols| {
+            let i = (i as i16 - row_offset).rem_euclid(rows as i16) as usize;
+            let j = (j as i16 - col_offset).rem_euclid(cols as i16) as usize;
             let row_repeats = term_rows as usize / rows + 2;
             let col_repeats = term_cols as usize / (cols * 2) + 2;
             for q in 0..row_repeats {
                 for w in 0..col_repeats {
-                    let i = ((i + q * rows) as i16 - row_offset) as u16;
-                    let j = ((j + w * cols) as i16 - col_offset) as u16 * 2;
+                    let i = ((i + q * rows) as i16 + row_offset) as u16;
+                    let j = ((j + w * cols) as i16 + col_offset) as u16 * 2;
                     if i < term_rows && j < term_cols {
                         execute!(std::io::stdout(), MoveTo(j, i)).unwrap();
                         print!(
@@ -446,7 +446,7 @@ fn main() {
 
                 grid[di][dj] = draw_state;
 
-                render_pixel(i as usize, j as usize, draw_state);
+                render_pixel(i as usize, j as usize, draw_state, term_rows, term_cols);
             }
             Message::Erase(j, i) => {
                 let j = j / 2;
@@ -455,7 +455,7 @@ fn main() {
                 let dj = (j as i16 + col_offset).rem_euclid(cols as i16) as usize;
                 grid[di][dj] = 0;
 
-                render_pixel(i as usize, j as usize, 0);
+                render_pixel(i as usize, j as usize, 0, term_rows, term_cols);
             }
             Message::Randomize => {
                 for cell in grid.iter_mut().flatten() {
