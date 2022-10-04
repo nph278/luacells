@@ -162,6 +162,7 @@ fn handle_input(send: &mpsc::Sender<Message>) {
             KeyCode::Char('c') => {
                 send.send(Message::GridClear).unwrap();
                 send.send(Message::Render).unwrap();
+                send.send(Message::Erase(0, 0)).unwrap();
             }
             _ => {}
         },
