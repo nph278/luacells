@@ -302,16 +302,19 @@ fn main() {
         pattern
     } else {
         // Empty pattern
-        vec![vec![0; cols]; rows]
+        let mut p = vec![vec![0; cols]; rows];
+        if randomize_start {
+            for cell in p.iter_mut().flatten() {
+                *cell = rng.gen_range(0..states);
+            }
+        }
+        p
     };
 
     let (send, recv) = mpsc::channel::<Message>();
 
     // Startup messages
     send.send(Message::ScreenClear).unwrap(); // Clear at start
-    if randomize_start {
-        send.send(Message::Randomize).unwrap();
-    }
     send.send(Message::Render).unwrap(); // Draw at start
 
     // Input loop
