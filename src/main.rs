@@ -22,7 +22,7 @@ use std::sync::mpsc;
 const CONTROLS: &str =
     "[q] Exit [hjkl/wasd/arrows] Move [+/-] Change speed [r] Randomize [c] Clear [s] Save pattern";
 const CONTROLS2: &str =
-    "[space] Play/Pause [tab] Step [leftclick] Draw [rightclick] Erase [scroll] Change state";
+    "[space] Play/Pause [tab] Step [leftclick] Draw [rightclick] Erase [scroll/1-9] Change state";
 const USAGE: &str = "
 USAGE: luacells [rule.lua]
   --pattern -p        Load pattern file
@@ -64,6 +64,7 @@ enum Message {
     ShiftCol(i16),
     ShiftDelay(i16),
     CycleState(i16),
+    SetState(u16),
     /// Col, row
     Draw(u16, u16),
     /// Col, row
@@ -163,6 +164,10 @@ fn handle_input(send: &mpsc::Sender<Message>) {
                 send.send(Message::GridClear).unwrap();
                 send.send(Message::Render).unwrap();
                 send.send(Message::Erase(0, 0)).unwrap();
+            }
+            KeyCode::Char(x @ '1'..='9') => {
+                send.send(Message::SetState(x.to_digit(10).unwrap() as u16))
+                    .unwrap();
             }
             _ => {}
         },
@@ -472,17 +477,27 @@ fn main() {
                 }
             }
             Message::CycleState(n) => {
-                if states > 2 {
-                    draw_state = (draw_state as i16 - n).clamp(0, states as i16 - 1) as u16;
+                draw_state = (draw_state as i16 - n).clamp(1, states as i16 - 1) as u16;
 
-                    execute!(std::io::stdout(), MoveTo(0, term_rows)).unwrap();
-                    if term_cols > CONTROLS.len() as u16 + 1 {
-                        println!(" {}", CONTROLS);
-                    }
-                    execute!(std::io::stdout(), MoveTo(0, term_rows + 1)).unwrap();
-                    if term_cols > CONTROLS2.len() as u16 + 7 {
-                        println!(" {} - {}", CONTROLS2, draw_state);
-                    }
+                execute!(std::io::stdout(), MoveTo(0, term_rows)).unwrap();
+                if term_cols > CONTROLS.len() as u16 + 1 {
+                    println!(" {}", CONTROLS);
+                }
+                execute!(std::io::stdout(), MoveTo(0, term_rows + 1)).unwrap();
+                if term_cols > CONTROLS2.len() as u16 + 7 {
+                    println!(" {} - {}", CONTROLS2, draw_state);
+                }
+            }
+            Message::SetState(n) => {
+                draw_state = n.clamp(1, states - 1);
+
+                execute!(std::io::stdout(), MoveTo(0, term_rows)).unwrap();
+                if term_cols > CONTROLS.len() as u16 + 1 {
+                    println!(" {}", CONTROLS);
+                }
+                execute!(std::io::stdout(), MoveTo(0, term_rows + 1)).unwrap();
+                if term_cols > CONTROLS2.len() as u16 + 7 {
+                    println!(" {} - {}", CONTROLS2, draw_state);
                 }
             }
             Message::Draw(j, i) => {
