@@ -163,7 +163,6 @@ fn handle_input(send: &mpsc::Sender<Message>) {
             KeyCode::Char('c') => {
                 send.send(Message::GridClear).unwrap();
                 send.send(Message::Render).unwrap();
-                send.send(Message::Erase(0, 0)).unwrap();
             }
             KeyCode::Char(x @ '1'..='9') => {
                 send.send(Message::SetState(x.to_digit(10).unwrap() as u16))
@@ -449,6 +448,7 @@ fn main() {
                 }
                 let row_repeats = term_rows as usize / rows + 2;
                 let col_repeats = term_cols as usize / (cols * 2) + 2;
+                let pl = diff.len() > 0;
                 for (i, j, n) in diff {
                     grid[i][j] = n;
                     // Incremental draw
@@ -468,7 +468,9 @@ fn main() {
                         }
                     }
                 }
-                println!();
+                if pl {
+                    println!();
+                }
             }
             Message::PlayPause => {
                 playing = !playing;
