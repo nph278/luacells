@@ -128,19 +128,19 @@ fn handle_input(send: &mpsc::Sender<Message>) {
         }
         Event::Key(KeyEvent { code, .. }) => match code {
             KeyCode::Char('q') => send.send(Message::Exit).unwrap(),
-            KeyCode::Char('a') | KeyCode::Char('h') | KeyCode::Left => {
+            KeyCode::Char('a' | 'h') | KeyCode::Left => {
                 send.send(Message::ShiftCol(-3)).unwrap();
                 send.send(Message::Render).unwrap();
             }
-            KeyCode::Char('d') | KeyCode::Char('l') | KeyCode::Right => {
+            KeyCode::Char('d' | 'l') | KeyCode::Right => {
                 send.send(Message::ShiftCol(3)).unwrap();
                 send.send(Message::Render).unwrap();
             }
-            KeyCode::Char('w') | KeyCode::Char('k') | KeyCode::Up => {
+            KeyCode::Char('w' | 'k') | KeyCode::Up => {
                 send.send(Message::ShiftRow(-3)).unwrap();
                 send.send(Message::Render).unwrap();
             }
-            KeyCode::Char('s') | KeyCode::Char('j') | KeyCode::Down => {
+            KeyCode::Char('s' | 'j') | KeyCode::Down => {
                 send.send(Message::ShiftRow(3)).unwrap();
                 send.send(Message::Render).unwrap();
             }
