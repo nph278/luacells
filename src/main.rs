@@ -8,13 +8,13 @@
 
 use crossterm::cursor::{Hide, MoveTo, Show};
 use crossterm::event::{
-    read, DisableMouseCapture, EnableMouseCapture, Event, KeyCode, KeyEvent, KeyModifiers,
-    MouseButton, MouseEvent, MouseEventKind,
+    DisableMouseCapture, EnableMouseCapture, Event, KeyCode, KeyEvent, KeyModifiers, MouseButton,
+    MouseEvent, MouseEventKind, read,
 };
 use crossterm::execute;
-use crossterm::terminal::{disable_raw_mode, enable_raw_mode, Clear, ClearType};
+use crossterm::terminal::{Clear, ClearType, disable_raw_mode, enable_raw_mode};
 
-use grid_area::{neighborhood, Neighborhood, Topology};
+use grid_area::{Neighborhood, Topology, neighborhood};
 use mlua::prelude::*;
 use rand::prelude::*;
 use std::sync::mpsc;
@@ -325,8 +325,10 @@ fn main() {
     // Input loop
     {
         let send = send.clone();
-        std::thread::spawn(move || loop {
-            handle_input(&send);
+        std::thread::spawn(move || {
+            loop {
+                handle_input(&send);
+            }
         });
     }
 
