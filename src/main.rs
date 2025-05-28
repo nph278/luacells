@@ -95,7 +95,7 @@ fn deserialize_pattern(s: &str) -> Vec<Vec<u16>> {
         .map(|x| {
             x.split(',')
                 .map(|x| {
-                    println!("- {}", x);
+                    println!("- {x}");
                     x.trim()
                         .parse()
                         .unwrap_or_else(|_| die!("Malformed pattern"))
@@ -200,7 +200,7 @@ fn main() {
         .next()
         .unwrap_or_else(|| die!("Please provide path to rule file"));
     if path == "--help" || path == "-h" {
-        println!("{}", USAGE);
+        println!("{USAGE}");
         std::process::exit(0);
     }
     let rule =
@@ -255,7 +255,7 @@ fn main() {
             );
         }
         if s == "--help" || s == "-h" {
-            println!("{}", USAGE);
+            println!("{USAGE}");
             std::process::exit(0);
         }
     }
@@ -268,9 +268,7 @@ fn main() {
     let lua = Lua::new();
 
     // Load rule
-    lua.load(&rule)
-        .exec()
-        .unwrap_or_else(|e| eprintln!("{}", e));
+    lua.load(&rule).exec().unwrap_or_else(|e| eprintln!("{e}"));
 
     let update: LuaFunction = lua
         .globals()
@@ -342,6 +340,20 @@ fn main() {
     execute!(std::io::stdout(), EnableMouseCapture).unwrap();
     enable_raw_mode().unwrap();
 
+    // Draw the controls message at the bottom of the view
+    macro_rules! draw_controls {
+        () => {{
+            execute!(std::io::stdout(), MoveTo(0, term_rows)).unwrap();
+            if term_cols > CONTROLS.len() as u16 + 1 {
+                println!(" {CONTROLS}");
+            }
+            execute!(std::io::stdout(), MoveTo(0, term_rows + 1)).unwrap();
+            if term_cols > CONTROLS2.len() as u16 + 7 {
+                println!(" {CONTROLS2} - {draw_state}");
+            }
+        }};
+    }
+
     // For use in drawing
     // Takes in pixel coords, not grid coords.
     let render_pixel = {
@@ -405,14 +417,7 @@ fn main() {
                     }
                 }
 
-                execute!(std::io::stdout(), MoveTo(0, term_rows)).unwrap();
-                if term_cols > CONTROLS.len() as u16 + 1 {
-                    println!(" {}", CONTROLS);
-                }
-                execute!(std::io::stdout(), MoveTo(0, term_rows + 1)).unwrap();
-                if term_cols > CONTROLS2.len() as u16 + 7 {
-                    println!(" {} - {}", CONTROLS2, draw_state);
-                }
+                draw_controls!();
             }
             Message::Step => {
                 // If we are playing, wait the delay and take another step
@@ -483,26 +488,12 @@ fn main() {
             Message::CycleState(n) => {
                 draw_state = (draw_state as i16 - n).clamp(1, states as i16 - 1) as u16;
 
-                execute!(std::io::stdout(), MoveTo(0, term_rows)).unwrap();
-                if term_cols > CONTROLS.len() as u16 + 1 {
-                    println!(" {}", CONTROLS);
-                }
-                execute!(std::io::stdout(), MoveTo(0, term_rows + 1)).unwrap();
-                if term_cols > CONTROLS2.len() as u16 + 7 {
-                    println!(" {} - {}", CONTROLS2, draw_state);
-                }
+                draw_controls!();
             }
             Message::SetState(n) => {
                 draw_state = n.clamp(1, states - 1);
 
-                execute!(std::io::stdout(), MoveTo(0, term_rows)).unwrap();
-                if term_cols > CONTROLS.len() as u16 + 1 {
-                    println!(" {}", CONTROLS);
-                }
-                execute!(std::io::stdout(), MoveTo(0, term_rows + 1)).unwrap();
-                if term_cols > CONTROLS2.len() as u16 + 7 {
-                    println!(" {} - {}", CONTROLS2, draw_state);
-                }
+                draw_controls!();
             }
             Message::Draw(j, i) => {
                 let j = j / 2;
@@ -545,7 +536,7 @@ fn main() {
         let serialized = serialize_pattern(&grid);
         if std::fs::write(p, &serialized).is_err() {
             eprintln!("Could not write to file, printing to stdout:");
-            println!("{}", serialized);
+            println!("{serialized}");
         };
     }
     std::process::exit(0);
