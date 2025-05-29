@@ -35,10 +35,14 @@ USAGE: luacells [rule.lua]
 // Clean up and return an error
 macro_rules! die {
     ($($s:expr), +) => {{
-        execute!(std::io::stdout(), Show).unwrap();
-        execute!(std::io::stdout(), DisableMouseCapture).unwrap();
-        execute!(std::io::stdout(), Clear(ClearType::All)).unwrap();
-        execute!(std::io::stdout(), MoveTo(0, 0)).unwrap();
+        execute!(
+            std::io::stdout(),
+            Show,
+            DisableMouseCapture,
+            Clear(ClearType::All),
+            MoveTo(0, 0)
+        )
+            .unwrap();
         disable_raw_mode().unwrap();
         eprintln!($($s), +);
         std::process::exit(1);
@@ -107,9 +111,7 @@ fn deserialize_pattern(s: &str) -> Vec<Vec<u16>> {
 
 // SIGTERM handler
 fn term() {
-    execute!(std::io::stdout(), Show).unwrap();
-    execute!(std::io::stdout(), Show).unwrap();
-    execute!(std::io::stdout(), DisableMouseCapture).unwrap();
+    execute!(std::io::stdout(), Show, DisableMouseCapture).unwrap();
     disable_raw_mode().unwrap();
     println!();
     std::process::exit(130);
@@ -336,8 +338,7 @@ fn main() {
     // What state is being drawm
     let mut draw_state: u16 = 1;
 
-    execute!(std::io::stdout(), Hide).unwrap();
-    execute!(std::io::stdout(), EnableMouseCapture).unwrap();
+    execute!(std::io::stdout(), Hide, EnableMouseCapture).unwrap();
     enable_raw_mode().unwrap();
 
     // Draw the controls message at the bottom of the view
@@ -526,11 +527,14 @@ fn main() {
         }
     }
 
-    execute!(std::io::stdout(), Show).unwrap();
-    execute!(std::io::stdout(), Show).unwrap();
-    execute!(std::io::stdout(), DisableMouseCapture).unwrap();
-    execute!(std::io::stdout(), Clear(ClearType::All)).unwrap();
-    execute!(std::io::stdout(), MoveTo(0, 0)).unwrap();
+    execute!(
+        std::io::stdout(),
+        Show,
+        DisableMouseCapture,
+        Clear(ClearType::All),
+        MoveTo(0, 0)
+    )
+    .unwrap();
     disable_raw_mode().unwrap();
     if let Some(p) = save_path {
         let serialized = serialize_pattern(&grid);
